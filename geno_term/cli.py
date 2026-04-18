@@ -9,7 +9,12 @@ import click
 
 from .discovery import discover, group_by_cwd
 from .iterm import build_script, run_script
-from .launch import build_launch_script, tasks_from_spec
+from .launch import (
+    build_fill_script,
+    build_launch_script,
+    current_iterm_session_uid,
+    tasks_from_spec,
+)
 
 
 @click.group()
@@ -59,9 +64,20 @@ def cmd_restart(target_dir: str, within_hours: float, close_names: tuple[str, ..
     required=True,
     help="JSON spec file — array of tasks with cwd, command, prompt, name.",
 )
+@click.option(
+    "--in-current-tab",
+    "in_current_tab",
+    is_flag=True,
+    help="Write tasks into existing panes of the current iTerm tab instead of creating new tabs. Skips the pane running geno-term. One task per pane, in iTerm's session order.",
+)
+@click.option(
+    "--include-current-pane",
+    is_flag=True,
+    help="With --in-current-tab, also target the pane running geno-term. Off by default to avoid self-nuking.",
+)
 @click.option("--print-only", is_flag=True, help="Print the AppleScript instead of running it.")
-def cmd_launch(spec: str, print_only: bool) -> None:
-    """Launch fresh command sessions as iTerm tabs+panes grouped by cwd.
+def cmd_launch(spec: str, in_current_tab: bool, include_current_pane: bool, print_only: bool) -> None:
+    """Launch fresh command sessions in iTerm.
 
     The spec file is a JSON array. Each entry:
 
@@ -69,19 +85,34 @@ def cmd_launch(spec: str, print_only: bool) -> None:
 
     ``command`` defaults to "clauded"; ``prompt`` (if present) is passed as one
     quoted argv to the command — handy for seeding a Claude Code session with
-    starting context. Tasks are grouped into tabs by ``cwd``.
+    starting context.
+
+    Default behavior: one new tab per distinct ``cwd``, panes laid out by task
+    count. With ``--in-current-tab``: writes tasks into the panes of the current
+    tab in iTerm's session order, skipping the pane running geno-term (override
+    with ``--include-current-pane``).
     """
     tasks = tasks_from_spec(spec)
     if not tasks:
         click.echo(f"No tasks in {spec}", err=True)
         sys.exit(1)
-    script = build_launch_script(tasks)
+
+    if in_current_tab:
+        skip_uid = None if include_current_pane else current_iterm_session_uid()
+        script = build_fill_script(tasks, skip_session_uid=skip_uid)
+    else:
+        script = build_launch_script(tasks)
+
     if print_only:
         click.echo(script)
         return
     run_script(script)
-    distinct_cwds = len({t.cwd for t in tasks})
-    click.echo(f"Launched {len(tasks)} session(s) across {distinct_cwds} tab(s).")
+
+    if in_current_tab:
+        click.echo(f"Filled {len(tasks)} pane(s) in current tab.")
+    else:
+        distinct_cwds = len({t.cwd for t in tasks})
+        click.echo(f"Launched {len(tasks)} session(s) across {distinct_cwds} tab(s).")
 
 
 if __name__ == "__main__":

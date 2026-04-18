@@ -8,12 +8,31 @@ one pane per task, running the command in each.
 from __future__ import annotations
 
 import json
+import os
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from textwrap import dedent
 
-from .iterm import MAX_PANES_PER_TAB, _quote_as, _sh_quote, build_layout_script
+from .iterm import (
+    MAX_PANES_PER_TAB,
+    _quote_as,
+    _sh_quote,
+    build_fill_current_tab_script,
+    build_layout_script,
+)
+
+
+def current_iterm_session_uid() -> str | None:
+    """Unique-id of the iTerm session running this process, or None if not set.
+
+    iTerm exports ``$ITERM_SESSION_ID`` shaped as ``w<n>t<n>p<n>:<UUID>``. We return
+    the UUID portion so AppleScript's ``unique id of session`` can match against it.
+    """
+    raw = os.environ.get("ITERM_SESSION_ID", "")
+    if ":" in raw:
+        return raw.split(":", 1)[1]
+    return None
 
 
 @dataclass
@@ -67,6 +86,29 @@ def build_launch_script(tasks: list[LaunchTask]) -> str:
             body_chunks.append(build_layout_script(named[i : i + MAX_PANES_PER_TAB]))
 
     body = "\n\n".join(body_chunks)
+    return dedent(
+        f"""
+        tell application "iTerm"
+            tell current window
+                {body}
+            end tell
+        end tell
+        """
+    ).strip()
+
+
+def build_fill_script(tasks: list[LaunchTask], skip_session_uid: str | None) -> str:
+    """Render AppleScript that writes tasks into the current tab's existing panes.
+
+    Unlike ``build_launch_script`` this creates no tabs — it targets whatever panes
+    are already laid out in the current tab, one task per pane, in iTerm's session
+    order. ``skip_session_uid`` (if set) excludes that pane from the target list so
+    the pane running geno-term can be preserved.
+    """
+    if not tasks:
+        raise ValueError("no tasks to launch")
+    named = [(t.shell_command(), t.pane_name()) for t in tasks]
+    body = build_fill_current_tab_script(named, skip_session_uid=skip_session_uid)
     return dedent(
         f"""
         tell application "iTerm"

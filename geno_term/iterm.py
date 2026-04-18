@@ -101,6 +101,48 @@ def build_layout_script(named_commands: list[tuple[str, str]]) -> str:
     return "\n".join(lines)
 
 
+def build_fill_current_tab_script(
+    named_commands: list[tuple[str, str]],
+    skip_session_uid: str | None = None,
+) -> str:
+    """AppleScript body that writes commands into existing panes of the current tab.
+
+    One command per pane, in iTerm's session-order for the tab. If ``skip_session_uid``
+    is set, the session with that unique id is excluded from the pane list — pass the
+    UUID portion of ``$ITERM_SESSION_ID`` to keep the pane running geno-term untouched.
+    Errors (via AppleScript ``error``) if the tab has fewer available panes than commands.
+    Wrap the return value in ``tell application "iTerm"`` / ``tell current window``.
+    """
+    n = len(named_commands)
+    if n == 0:
+        raise ValueError("need at least one command")
+
+    lines = ["set allSessions to sessions of current tab"]
+    if skip_session_uid:
+        lines.append(f"set skipId to {_quote_as(skip_session_uid)}")
+        lines.append("set paneList to {}")
+        lines.append("repeat with i from 1 to count of allSessions")
+        lines.append("\tset s to item i of allSessions")
+        lines.append("\tif unique id of s is not skipId then")
+        lines.append("\t\tset end of paneList to s")
+        lines.append("\tend if")
+        lines.append("end repeat")
+    else:
+        lines.append("set paneList to allSessions")
+
+    lines.append(f"if (count of paneList) < {n} then")
+    lines.append(f'\terror "current tab has fewer than {n} available pane(s)"')
+    lines.append("end if")
+
+    for i, (cmd, name) in enumerate(named_commands, start=1):
+        lines.append(f"tell item {i} of paneList")
+        lines.append(f"\twrite text {_quote_as(cmd)}")
+        lines.append(f"\tset name to {_quote_as(name)}")
+        lines.append("end tell")
+
+    return "\n".join(lines)
+
+
 def _build_tab_script(cwd: str, sessions: list[Session]) -> str:
     named = [
         (f"cd {_sh_quote(cwd)} && claude --resume {s.session_id}", s.short_topic)
