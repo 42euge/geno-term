@@ -9,6 +9,7 @@ import click
 
 from .discovery import discover, group_by_cwd
 from .iterm import build_script, run_script
+from .launch import build_launch_script, tasks_from_spec
 
 
 @click.group()
@@ -49,6 +50,38 @@ def cmd_restart(target_dir: str, within_hours: float, close_names: tuple[str, ..
         return
     run_script(script)
     click.echo(f"Opened {len(sessions)} session(s) across {len(group_by_cwd(sessions))} tab(s).")
+
+
+@main.command("launch")
+@click.option(
+    "--spec",
+    type=click.Path(exists=True, dir_okay=False, resolve_path=True),
+    required=True,
+    help="JSON spec file — array of tasks with cwd, command, prompt, name.",
+)
+@click.option("--print-only", is_flag=True, help="Print the AppleScript instead of running it.")
+def cmd_launch(spec: str, print_only: bool) -> None:
+    """Launch fresh command sessions as iTerm tabs+panes grouped by cwd.
+
+    The spec file is a JSON array. Each entry:
+
+      { "cwd": "/abs/path", "command": "clauded", "prompt": "...", "name": "..." }
+
+    ``command`` defaults to "clauded"; ``prompt`` (if present) is passed as one
+    quoted argv to the command — handy for seeding a Claude Code session with
+    starting context. Tasks are grouped into tabs by ``cwd``.
+    """
+    tasks = tasks_from_spec(spec)
+    if not tasks:
+        click.echo(f"No tasks in {spec}", err=True)
+        sys.exit(1)
+    script = build_launch_script(tasks)
+    if print_only:
+        click.echo(script)
+        return
+    run_script(script)
+    distinct_cwds = len({t.cwd for t in tasks})
+    click.echo(f"Launched {len(tasks)} session(s) across {distinct_cwds} tab(s).")
 
 
 if __name__ == "__main__":

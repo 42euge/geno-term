@@ -20,7 +20,33 @@ geno-term discover "/path/to/project"
 
 # Restart every session found, grouped into iTerm tabs + panes by cwd
 geno-term restart "/path/to/project"
+
+# Launch fresh command sessions (one per task) from a JSON spec
+geno-term launch --spec tasks.json
 ```
+
+### `launch` spec format
+
+```json
+[
+  {
+    "cwd": "/abs/path/to/repo-a",
+    "command": "clauded",
+    "prompt": "Work on issue #2 — start with `gh issue view 2 ...`",
+    "name": "i2"
+  },
+  {
+    "cwd": "/abs/path/to/repo-b",
+    "command": "clauded",
+    "prompt": "Scaffold the new product — start by reading issue #4",
+    "name": "i4"
+  }
+]
+```
+
+`command` defaults to `clauded`. `prompt`, if set, is passed as one quoted
+argv to the command — handy for seeding a Claude Code session with starting
+context. Tasks are grouped into tabs by `cwd`, same layout rules as `restart`.
 
 ## How it works
 

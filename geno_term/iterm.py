@@ -13,6 +13,14 @@ def _quote_as(s: str) -> str:
     return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
+def _sh_quote(s: str) -> str:
+    """Single-quote a string for use inside an AppleScript-embedded shell command."""
+    return "'" + s.replace("'", "'\\''") + "'"
+
+
+MAX_PANES_PER_TAB = 6
+
+
 def _pane_layout(n: int) -> str:
     """Pick a grid shape given pane count."""
     if n <= 1:
@@ -24,11 +32,22 @@ def _pane_layout(n: int) -> str:
     return "3x2"  # up to 6
 
 
-def _build_tab_script(cwd: str, sessions: list[Session]) -> str:
-    n = len(sessions)
+def build_layout_script(named_commands: list[tuple[str, str]]) -> str:
+    """AppleScript for a new iTerm tab split into panes running given commands.
+
+    ``named_commands`` is a list of ``(shell_command, pane_name)`` pairs. One tab
+    is created, panes are laid out in a grid sized to the list length, and each
+    pane runs its command and takes its name. Callers wrap this in the outer
+    ``tell application "iTerm"`` / ``tell current window`` block.
+    """
+    n = len(named_commands)
+    if n == 0:
+        raise ValueError("need at least one command")
+    if n > MAX_PANES_PER_TAB:
+        raise ValueError(f"at most {MAX_PANES_PER_TAB} panes per tab")
     layout = _pane_layout(n)
-    cmds = [f"cd {_sh_quote(cwd)} && claude --resume {s.session_id}" for s in sessions]
-    names = [s.short_topic for s in sessions]
+    cmds = [c for c, _ in named_commands]
+    names = [n for _, n in named_commands]
 
     lines = ["set newTab to (create tab with default profile)"]
     lines.append("set s1 to current session of newTab")
@@ -82,12 +101,12 @@ def _build_tab_script(cwd: str, sessions: list[Session]) -> str:
     return "\n".join(lines)
 
 
-def _sh_quote(s: str) -> str:
-    """Single-quote a string for use inside an AppleScript-embedded shell command."""
-    return "'" + s.replace("'", "'\\''") + "'"
-
-
-MAX_PANES_PER_TAB = 6
+def _build_tab_script(cwd: str, sessions: list[Session]) -> str:
+    named = [
+        (f"cd {_sh_quote(cwd)} && claude --resume {s.session_id}", s.short_topic)
+        for s in sessions
+    ]
+    return build_layout_script(named)
 
 
 def build_script(sessions: list[Session], close_names: list[str] | None = None) -> str:
