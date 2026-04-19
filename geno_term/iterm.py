@@ -101,37 +101,65 @@ def build_layout_script(named_commands: list[tuple[str, str]]) -> str:
     return "\n".join(lines)
 
 
-def build_fill_current_tab_script(
+def build_fill_tab_script(
     named_commands: list[tuple[str, str]],
-    skip_session_uid: str | None = None,
+    self_session_uid: str,
+    include_self: bool = False,
 ) -> str:
-    """AppleScript body that writes commands into existing panes of the current tab.
+    """AppleScript body that writes commands into panes of the tab containing the caller.
 
-    One command per pane, in iTerm's session-order for the tab. If ``skip_session_uid``
-    is set, the session with that unique id is excluded from the pane list — pass the
-    UUID portion of ``$ITERM_SESSION_ID`` to keep the pane running geno-term untouched.
-    Errors (via AppleScript ``error``) if the tab has fewer available panes than commands.
-    Wrap the return value in ``tell application "iTerm"`` / ``tell current window``.
+    Locates the target tab by searching every iTerm window for a session whose
+    ``unique id`` matches ``self_session_uid`` (the UUID portion of
+    ``$ITERM_SESSION_ID``). This is intentional: AppleScript's ``current tab`` is
+    the *focused* tab at execution time, which is often not the tab the script
+    was launched from — see geno-term#2.
+
+    One command per pane, in iTerm's session order for the tab. The caller's own
+    pane is skipped unless ``include_self`` is true. Errors (via AppleScript
+    ``error``) if the target tab can't be found or has fewer panes than commands.
+    Wrap the return value in ``tell application "iTerm"`` only — this body walks
+    windows itself, so a ``tell current window`` wrapper would be wrong.
     """
     n = len(named_commands)
     if n == 0:
         raise ValueError("need at least one command")
+    if not self_session_uid:
+        raise ValueError("self_session_uid is required to locate the caller's tab")
 
-    lines = ["set allSessions to sessions of current tab"]
-    if skip_session_uid:
-        lines.append(f"set skipId to {_quote_as(skip_session_uid)}")
+    lines = [
+        f"set myId to {_quote_as(self_session_uid)}",
+        "set targetTab to missing value",
+        "repeat with w in windows",
+        "\trepeat with t in tabs of w",
+        "\t\trepeat with s in sessions of t",
+        "\t\t\tif unique id of s is myId then",
+        "\t\t\t\tset targetTab to t",
+        "\t\t\t\texit repeat",
+        "\t\t\tend if",
+        "\t\tend repeat",
+        "\t\tif targetTab is not missing value then exit repeat",
+        "\tend repeat",
+        "\tif targetTab is not missing value then exit repeat",
+        "end repeat",
+        "if targetTab is missing value then",
+        '\terror "could not locate tab containing the caller; is $ITERM_SESSION_ID set?"',
+        "end if",
+        "set allSessions to sessions of targetTab",
+    ]
+
+    if include_self:
+        lines.append("set paneList to allSessions")
+    else:
         lines.append("set paneList to {}")
         lines.append("repeat with i from 1 to count of allSessions")
         lines.append("\tset s to item i of allSessions")
-        lines.append("\tif unique id of s is not skipId then")
+        lines.append("\tif unique id of s is not myId then")
         lines.append("\t\tset end of paneList to s")
         lines.append("\tend if")
         lines.append("end repeat")
-    else:
-        lines.append("set paneList to allSessions")
 
     lines.append(f"if (count of paneList) < {n} then")
-    lines.append(f'\terror "current tab has fewer than {n} available pane(s)"')
+    lines.append(f'\terror "target tab has fewer than {n} available pane(s)"')
     lines.append("end if")
 
     for i, (cmd, name) in enumerate(named_commands, start=1):

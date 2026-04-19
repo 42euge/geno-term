@@ -98,8 +98,14 @@ def cmd_launch(spec: str, in_current_tab: bool, include_current_pane: bool, prin
         sys.exit(1)
 
     if in_current_tab:
-        skip_uid = None if include_current_pane else current_iterm_session_uid()
-        script = build_fill_script(tasks, skip_session_uid=skip_uid)
+        self_uid = current_iterm_session_uid()
+        if not self_uid:
+            click.echo(
+                "error: --in-current-tab needs $ITERM_SESSION_ID — run geno-term from an iTerm pane.",
+                err=True,
+            )
+            sys.exit(2)
+        script = build_fill_script(tasks, self_session_uid=self_uid, include_self=include_current_pane)
     else:
         script = build_launch_script(tasks)
 

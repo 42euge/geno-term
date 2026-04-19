@@ -18,7 +18,7 @@ from .iterm import (
     MAX_PANES_PER_TAB,
     _quote_as,
     _sh_quote,
-    build_fill_current_tab_script,
+    build_fill_tab_script,
     build_layout_script,
 )
 
@@ -97,24 +97,23 @@ def build_launch_script(tasks: list[LaunchTask]) -> str:
     ).strip()
 
 
-def build_fill_script(tasks: list[LaunchTask], skip_session_uid: str | None) -> str:
-    """Render AppleScript that writes tasks into the current tab's existing panes.
+def build_fill_script(tasks: list[LaunchTask], self_session_uid: str, include_self: bool = False) -> str:
+    """Render AppleScript that writes tasks into the caller's tab's existing panes.
 
     Unlike ``build_launch_script`` this creates no tabs — it targets whatever panes
-    are already laid out in the current tab, one task per pane, in iTerm's session
-    order. ``skip_session_uid`` (if set) excludes that pane from the target list so
-    the pane running geno-term can be preserved.
+    are already laid out in the tab containing the pane identified by
+    ``self_session_uid`` (the UUID portion of ``$ITERM_SESSION_ID``). One task per
+    pane, in iTerm's session order. The caller's own pane is skipped unless
+    ``include_self`` is true.
     """
     if not tasks:
         raise ValueError("no tasks to launch")
     named = [(t.shell_command(), t.pane_name()) for t in tasks]
-    body = build_fill_current_tab_script(named, skip_session_uid=skip_session_uid)
+    body = build_fill_tab_script(named, self_session_uid=self_session_uid, include_self=include_self)
     return dedent(
         f"""
         tell application "iTerm"
-            tell current window
-                {body}
-            end tell
+            {body}
         end tell
         """
     ).strip()
