@@ -1,0 +1,14 @@
+name: term
+version: 0.1.0
+description: >-
+  Terminal automation for coding agent session recovery — discover and restart
+  crashed sessions as iTerm2 tabs and panes grouped by working directory.
+
+venv:
+  name: geno-term
+  deps:
+    - click>=8.0
+
+runtime:
+  - src: geno_term
+    dst: geno_term
