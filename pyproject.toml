@@ -1,7 +1,7 @@
 [project]
 name = "geno-term"
 version = "0.1.0"
-description = "Terminal automation for Claude Code session recovery — discover and restart crashed sessions as iTerm2 tabs and panes"
+description = "Terminal automation for coding agent session recovery — discover and restart crashed sessions as iTerm2 tabs and panes"
 requires-python = ">=3.10"
 dependencies = ["click>=8.0"]
 

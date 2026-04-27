@@ -1,3 +1,3 @@
-"""geno-term — terminal automation for Claude Code session recovery."""
+"""geno-term — terminal automation for coding agent session recovery."""
 
 __version__ = "0.1.0"

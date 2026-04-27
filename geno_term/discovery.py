@@ -1,4 +1,4 @@
-"""Find Claude Code sessions on disk for a given target directory."""
+"""Find coding agent sessions on disk for a given target directory."""
 
 from __future__ import annotations
 
