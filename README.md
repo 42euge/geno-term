@@ -24,7 +24,45 @@ geno-term discover "/path/to/project"
 
 # Restart every session found, grouped into iTerm tabs + panes by cwd
 geno-term restart "/path/to/project"
+
+# Launch fresh command sessions (one per task) from a JSON spec
+geno-term launch --spec tasks.json
 ```
+
+### `launch` spec format
+
+```json
+[
+  {
+    "cwd": "/abs/path/to/repo-a",
+    "command": "clauded",
+    "prompt": "Work on issue #2 — start with `gh issue view 2 ...`",
+    "name": "i2"
+  },
+  {
+    "cwd": "/abs/path/to/repo-b",
+    "command": "clauded",
+    "prompt": "Scaffold the new product — start by reading issue #4",
+    "name": "i4"
+  }
+]
+```
+
+`command` defaults to `clauded`. `prompt`, if set, is passed as one quoted
+argv to the command — handy for seeding a Claude Code session with starting
+context. Tasks are grouped into tabs by `cwd`, same layout rules as `restart`.
+
+#### Filling the current tab instead of creating new ones
+
+```bash
+# Write one task per existing pane in the current iTerm tab.
+# The pane running geno-term is skipped so you don't nuke yourself.
+geno-term launch --spec tasks.json --in-current-tab
+```
+
+Use this when you've already split a tab into the layout you want and just
+need commands written into the panes. Panes are targeted in iTerm's session
+order. Pass `--include-current-pane` to also target the running pane.
 
 ## How it works
 
