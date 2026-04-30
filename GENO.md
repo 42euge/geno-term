@@ -4,10 +4,10 @@ Discover and restart crashed coding agent sessions as iTerm2 tabs and panes, gro
 
 ## Skills
 
-| Skill | Sub-skillset | Slash command |
-|-------|-------------|---------------|
-| geno-term | — | — (umbrella) |
-| geno-term-sessions-restart | sessions | /geno-term-sessions-restart |
+| Skill | Sub-skillset | Slash command | Alias |
+|-------|-------------|---------------|-------|
+| geno-term | — | — (umbrella) | — |
+| geno-term-sessions-restart | sessions | /geno-term-sessions-restart | /gt-term-sessions-restart |
 
 ## Repo structure
 
@@ -52,3 +52,14 @@ Options: `--within-hours N` (time window filter), `--close <name>` (close old ta
 - Skills live under `skills/` with a `SKILL.md` in each directory.
 - The Python package is `geno_term` with entry point `geno_term.cli:main`.
 - macOS + iTerm2 is the only supported platform. Extending to tmux would mean swapping the renderer in `geno_term/iterm.py`.
+
+### Prefix aliasing
+
+Slash commands use the canonical `geno-` prefix in source (e.g. `/geno-term-sessions-restart`). Short `/gt-` aliases (e.g. `/gt-term-sessions-restart`) are configured per-install by `geno-tools` and are not defined in this repo. The skills table above lists both forms for discoverability.
+
+### Adding a new skill
+
+1. Create a directory under `skills/` named after the skill (e.g. `skills/geno-term-<name>/`).
+2. Add a `SKILL.md` with YAML front-matter (`name`, `description`, `allowed-tools`, `argument-hint`, `metadata`) and step-by-step instructions.
+3. Update the skills table in this file with the new skill's canonical slash command and `/gt-` alias.
+4. If the skill needs new Python code, add it to the `geno_term` package and expose any CLI sub-commands via Click in `cli.py`.
