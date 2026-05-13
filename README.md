@@ -1,5 +1,7 @@
 # geno-term
 
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://42euge.github.io/geno-term/)
+
 Terminal automation for coding agent session recovery.
 
 When the macOS window server crashes (or you close iTerm without meaning to), coding agent sessions on disk survive — but the running processes don't. `geno-term` discovers those sessions and restarts them as iTerm2 tabs and panes, grouped by working directory.
