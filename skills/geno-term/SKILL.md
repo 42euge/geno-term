@@ -8,9 +8,21 @@ description: >-
   sessions" / "find my lost sessions" in a project.
 allowed-tools: "Bash(geno-term *) Bash(osascript *)"
 argument-hint: "[discover|restart] <target_dir>"
+<<<<<<< Updated upstream
 metadata:
   author: 42euge
   version: "0.1.0"
+=======
+observability:
+  success_signal: "sessions discovered and listed, or iTerm tabs opened with resumed sessions"
+  failure_signals:
+    - "geno-term CLI not on PATH"
+    - "no sessions found under the target directory"
+    - "iTerm2 not running or AppleScript execution failed"
+  knowledge_reads:
+    - "~/.claude/projects/ (session JSONL transcripts)"
+  knowledge_writes: []
+>>>>>>> Stashed changes
 ---
 
 # geno-term — Session Recovery
@@ -57,3 +69,19 @@ More than 6 sessions sharing a cwd means multiple tabs for that cwd — the CLI 
 - macOS + iTerm2 only.
 - Sessions that hit a rate limit before the crash may still be limited on resume.
 - If a session already resumed earlier in the day, `claude --resume` continues the same JSONL — no fork.
+
+## Completion
+
+When this skill finishes, emit a trace:
+
+```bash
+geno-trace emit \
+  --skill geno-term \
+  --status <success|failure|abandoned> \
+  --tool-calls <approximate count> \
+  --errors <count of tool/command errors>
+```
+
+- `success` = sessions discovered and listed, or iTerm tabs opened with resumed sessions
+- `failure` = geno-term CLI missing, no sessions found under target directory, or AppleScript failed
+- `abandoned` = user stopped early
