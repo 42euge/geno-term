@@ -1,18 +1,13 @@
 ---
 name: geno-term
 description: >-
-  Recover crashed coding agent sessions in a project tree. Discovers every
+  Recover crashed Claude Code sessions in a project tree. Discovers every
   session whose cwd is under a target directory, then restarts them as
   iTerm2 tabs with panes grouped by cwd. Use when the user says their
   window server crashed, sessions vanished, or asks to "restart all my
   sessions" / "find my lost sessions" in a project.
 allowed-tools: "Bash(geno-term *) Bash(osascript *)"
 argument-hint: "[discover|restart] <target_dir>"
-<<<<<<< Updated upstream
-metadata:
-  author: 42euge
-  version: "0.1.0"
-=======
 observability:
   success_signal: "sessions discovered and listed, or iTerm tabs opened with resumed sessions"
   failure_signals:
@@ -22,12 +17,11 @@ observability:
   knowledge_reads:
     - "~/.claude/projects/ (session JSONL transcripts)"
   knowledge_writes: []
->>>>>>> Stashed changes
 ---
 
-# geno-term — Session Recovery
+# geno-term — Claude Code Session Recovery
 
-When a macOS window server crash or accidental quit kills iTerm, coding agent session transcripts on disk survive. This skill finds them and puts them back.
+When a macOS window server crash or accidental quit kills iTerm, Claude Code session transcripts on disk survive. This skill finds them and puts them back.
 
 ## Commands
 
@@ -49,7 +43,7 @@ Add `--close <name>` (repeatable) if a previous flat-tab run left old tabs aroun
 
 ## When to use
 
-- User reports a window server / display crash and wants prior work back.
+- User reports a window server / display crash and wants prior Claude Code work back.
 - User asks what sessions were running in a project before a reboot.
 - User says "restart all my sessions in <project>".
 
